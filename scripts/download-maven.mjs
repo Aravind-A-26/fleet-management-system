@@ -1,0 +1,13 @@
+import {createHash} from 'node:crypto';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+const root=new URL('../.tools/',import.meta.url);
+await mkdir(root,{recursive:true});
+const url='https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip';
+const [archive,checksum]=await Promise.all([fetch(url),fetch(url+'.sha512')]);
+if(!archive.ok||!checksum.ok)throw new Error('Maven download failed');
+const bytes=Buffer.from(await archive.arrayBuffer());
+const expected=(await checksum.text()).trim().split(/\s+/)[0].toLowerCase();
+if(createHash('sha512').update(bytes).digest('hex')!==expected)throw new Error('Maven checksum mismatch');
+await writeFile(new URL('maven.zip',root),bytes);
+console.log('Verified Maven archive downloaded to '+fileURLToPath(root));
